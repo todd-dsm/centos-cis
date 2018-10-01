@@ -94,5 +94,28 @@
       "type": "vagrant",
       "output": "{{user `box_dir`}}/{{user `distro`}}/{{user `template`}}.{{.Provider}}.box"
     }
+  ],
+  "provisioners": [
+    {
+      "environment_vars": [
+        "HOME_DIR=/home/vagrant",
+        "http_proxy={{user `http_proxy`}}",
+        "https_proxy={{user `https_proxy`}}",
+        "no_proxy={{user `no_proxy`}}"
+      ],
+      "execute_command": "echo 'vagrant' | {{.Vars}} sudo -S -E bash -eux '{{.Path}}'",
+      "expect_disconnect": true,
+      "scripts": [
+        "scripts/update.sh",
+        "scripts/common/sshd.sh",
+        "scripts/networking.sh",
+        "scripts/common/vagrant.sh",
+        "scripts/common/virtualbox.sh",
+        "scripts/common/vmware.sh",
+        "scripts/cleanup.sh",
+        "scripts/common/minimize.sh"
+      ],
+      "type": "shell"
+    }
   ]
 }
