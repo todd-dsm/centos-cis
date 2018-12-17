@@ -1,0 +1,127 @@
+{ 
+  "variables": {
+    "distro": "centos",
+    "template": "centos-7.5-cis",
+    "cpus": "1",
+    "memory": "1024",
+    "disk_size": "81920",
+    "ks_path": "centos-7.5-cis-rh.cfg",
+    "headless": "",
+    "box_dir": "{{env `VAGRANT_BOXES`}}",
+    "build_dir": "{{env `PACKER_BUILD_DIR`}}",
+    "http_proxy": "{{env `http_proxy`}}",
+    "https_proxy": "{{env `https_proxy`}}",
+    "mirror": "http://mirrors.kernel.org/centos",
+    "mirror_directory": "7.5.1804/isos/x86_64",
+    "iso_name": "CentOS-7-x86_64-DVD-1804.iso",
+    "iso_checksum": "506e4e06abf778c3435b4e5745df13e79ebfc86565d7ea1e128067ef6b5a6345",
+    "iso_checksum_type": "sha256",
+    "no_proxy": "{{env `no_proxy`}}",
+    "git_revision": "__unknown_git_revision__",
+    "build_timestamp": "{{isotime \"20060102150405\"}}",
+    "version": "TIMESTAMP"
+  },
+  "builders": [
+    {
+      "boot_command": [
+        "<up><wait><tab> text ks=http://{{ .HTTPIP }}:{{ .HTTPPort }}/{{user `ks_path`}}<enter><wait>"
+      ],
+      "boot_wait": "10s",
+      "disk_size": "{{user `disk_size`}}",
+      "guest_additions_path": "VBoxGuestAdditions_{{.Version}}.iso",
+      "guest_os_type": "RedHat_64",
+      "hard_drive_interface": "sata",
+      "headless": "{{ user `headless` }}",
+      "keep_registered": true,
+      "http_directory": "http",
+      "iso_checksum": "{{user `iso_checksum`}}",
+      "iso_checksum_type": "{{user `iso_checksum_type`}}",
+      "iso_url": "{{user `mirror`}}/{{user `mirror_directory`}}/{{user `iso_name`}}",
+      "output_directory": "{{user `build_dir`}}/{{user `distro`}}",
+      "shutdown_command": "echo 'devops' | sudo -S /sbin/halt -h -p",
+      "ssh_password": "devops",
+      "ssh_port": 22,
+      "ssh_username": "devops",
+      "ssh_wait_timeout": "10000s",
+      "type": "virtualbox-iso",
+      "vboxmanage": [
+        [
+          "modifyvm",
+          "{{.Name}}",
+          "--memory",
+          "{{ user `memory` }}"
+        ],
+        [
+          "modifyvm",
+          "{{.Name}}",
+          "--cpus",
+          "{{ user `cpus` }}"
+        ]
+      ],
+      "virtualbox_version_file": ".vbox_version",
+      "vm_name": "{{ user `template` }}"
+    },
+    {
+      "boot_command": [
+        "<up><wait><tab> text ks=http://{{ .HTTPIP }}:{{ .HTTPPort }}/{{user `ks_path`}}<enter><wait>"
+      ],
+      "boot_wait": "10s",
+      "disk_size": "{{user `disk_size`}}",
+      "guest_os_type": "centos-64",
+      "headless": "{{ user `headless` }}",
+      "http_directory": "http",
+      "iso_checksum": "{{user `iso_checksum`}}",
+      "iso_checksum_type": "{{user `iso_checksum_type`}}",
+      "iso_url": "{{user `mirror`}}/{{user `mirror_directory`}}/{{user `iso_name`}}",
+      "output_directory": "{{user `build_dir`}}/{{user `distro`}}/{{user `template`}}-vmware",
+      "shutdown_command": "echo 'devops' | sudo -S /sbin/halt -h -p",
+      "ssh_password": "devops",
+      "ssh_port": 22,
+      "ssh_username": "devops",
+      "ssh_wait_timeout": "10000s",
+      "tools_upload_flavor": "linux",
+      "type": "vmware-iso",
+      "keep_registered": true,
+      "vm_name": "{{ user `template` }}",
+      "vmx_data": {
+        "cpuid.coresPerSocket": "1",
+        "memsize": "{{ user `memory` }}",
+        "numvcpus": "{{ user `cpus` }}"
+      },
+      "vmx_remove_ethernet_interfaces": true
+    }
+  ],
+  "post-processors": [
+    {
+      "type": "vagrant",
+      "output": "{{user `box_dir`}}/{{user `distro`}}/{{user `template`}}.{{.Provider}}.box"
+    }
+  ],
+  "provisioners": [
+    {
+      "type": "file",
+      "source": "./stuff/",
+      "destination": "/tmp"
+    },
+    {
+      "type": "shell",
+      "environment_vars": [
+        "HOME_DIR=/home/devops",
+        "http_proxy={{user `http_proxy`}}",
+        "https_proxy={{user `https_proxy`}}",
+        "no_proxy={{user `no_proxy`}}"
+      ],
+      "execute_command": "echo 'devops' | {{.Vars}} sudo -S -E bash -eux '{{.Path}}'",
+      "expect_disconnect": true,
+      "scripts": [
+        "scripts/update.sh",
+        "scripts/common/admin_user.sh",
+        "scripts/common/sysadmin_accounts.sh",
+        "scripts/networking.sh",
+        "scripts/common/kauditd_hold_queue_overflow.sh",
+        "scripts/cleanup.sh",
+        "scripts/common/minimize.sh"
+      ]
+    }
+  ]
+}
